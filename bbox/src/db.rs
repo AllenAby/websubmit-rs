@@ -1,5 +1,6 @@
 extern crate mysql;
 
+use std::collections::HashMap;
 // BBox
 use crate::BBox;
 
@@ -7,6 +8,7 @@ use crate::BBox;
 pub use mysql::{Opts, Statement, Result, Binary, SetColumns};
 pub use mysql::prelude::{AsStatement, ColumnIndex, FromValue};
 pub use crate::db::mysql::prelude::Queryable;
+use crate::policy::PolicyStorage;
 
 // What is a (return) value.
 pub type Value = BBox<mysql::Value>;
@@ -93,6 +95,8 @@ into_params_impl!([A, a], [B, b], [C, c], [D, d], [E, e], [F, f], [G, g], [H, h]
 pub struct Row {
   row: mysql::Row,
 }
+
+// TODO(artem): inline policies here
 impl Row {
   pub fn get<T: FromValue, I: ColumnIndex>(&self, index: I) -> Option<BBox<T>> {
     match self.row.get(index) {
@@ -100,7 +104,7 @@ impl Row {
       Option::Some(t) => Option::Some(BBox::new(t)),
     }
   }
-  
+
   pub fn unwrap(self) -> Vec<Value> {
     let vals = self.row.unwrap();
     vals.into_iter().map(|v| BBox::new(v)).collect()
@@ -139,17 +143,19 @@ impl<'c, 't, 'tc> Iterator for QueryResult<'c, 't, 'tc> {
 
 
 // BBox DB connection
-pub struct Conn {
+pub struct Conn<'a, U, D> {
   conn: mysql::Conn,
+  policy_storage: PolicyStorage<'a, U, D>
 }
 
-impl Conn {
+impl<'a, U, D> Conn<'a, U, D> {
   // Creating a new DBConn is the same as creating a new mysql::Conn.
-  pub fn new<T: Into<Opts>>(opts: T) -> Result<Conn> {
+  pub fn new<T: Into<Opts>>(opts: T) -> Result<Conn<'a, U, D>> {
     let conn = mysql::Conn::new(opts)?;
-    Ok(Conn { conn: conn })
+    let policy_storage = PolicyStorage { storage: HashMap::new() };
+    Ok(Conn { conn: conn, policy_storage })
   }
-  
+
   // Test ping.
   pub fn ping(&mut self) -> bool {
     self.conn.ping()
@@ -179,7 +185,7 @@ impl Conn {
     let result = self.conn.exec_iter(stmt, params)?;
     Ok(QueryResult { result: result })
   }
-  
+
   // private helper function.
   fn unbox_params(&self, params: Params) -> mysql::params::Params {
     match params {

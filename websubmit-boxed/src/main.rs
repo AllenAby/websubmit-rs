@@ -27,6 +27,8 @@ mod config;
 mod email;
 mod login;
 mod questions;
+mod policy;
+// mod manage;
 //mod grades;
 //mod predict;
 

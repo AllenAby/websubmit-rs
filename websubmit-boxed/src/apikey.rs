@@ -31,6 +31,7 @@ pub(crate) enum ApiKeyError {
 }
 
 /// (username, apikey)
+#[derive(Debug)]
 pub(crate) struct ApiKey {
     pub user: BBox<String>,
     pub key: BBox<String>,

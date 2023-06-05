@@ -11,6 +11,7 @@ use rocket_dyn_templates::Template;
 use serde::Serialize;
 
 use bbox::{BBox, BBoxRender, ValueOrBBox};
+use bbox::context::Context;
 use bbox_derive::BBoxRender;
 use bbox::db::{from_value};
 
@@ -138,11 +139,17 @@ pub(crate) fn answers(
 
 #[get("/<num>")]
 pub(crate) fn questions(
+    context: Context<ApiKey>,
     apikey: ApiKey,
     num: BBox<u8>,
     backend: &State<Arc<Mutex<MySqlBackend>>>,
 ) -> Template {
     use std::collections::HashMap;
+
+    // Example of acquiring a context.
+    println!("{:?}", context);
+    println!("{:?}", context.get_user());
+    println!("{:?}", context.get_route());
 
     let mut bg = backend.lock().unwrap();
     let key = num.into2::<u64>();

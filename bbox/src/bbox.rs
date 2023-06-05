@@ -1,10 +1,12 @@
 use std::fmt;
-use std::str::FromStr;
+use std::marker::PhantomData;
+use crate::policy::AbstractPolicy;
 
-use rocket::request::FromParam;
-
-pub struct BBox<T> {
+pub struct BBox<T, U, D, P: AbstractPolicy<T, U, D>> {
   pub(crate) t: T,
+  policies: Vec<P>,
+  owner: U,
+  db_type: PhantomData<D>
 }
 
 // BBox and containers of it are sandboxable.
@@ -111,17 +113,5 @@ impl<T> fmt::Debug for BBox<T> {
 impl<T: Clone> Clone for BBox<T> {
   fn clone(&self) -> Self {
     BBox::new(self.t.clone())
-  }
-}
-
-// Facilitate URL parameter conversion.
-impl<'r, T: FromStr> FromParam<'r> for BBox<T> {
-  type Error = &'r str;
-
-  fn from_param(param: &'r str) -> Result<Self, Self::Error> {
-    match param.parse::<T>() {
-      Ok(converted) => Ok(BBox::new(converted)),
-      Err(_) => Err(param)
-    }
   }
 }
